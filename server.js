@@ -16,11 +16,9 @@ const io = new Server(server, {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-
 io.on("connection", (socket) => {
   console.log("Usuario conectados:", socket.id);
 
-  
   Message.find()
     .sort({ timestamp: 1 })
     .then((messages) => {
@@ -28,15 +26,28 @@ io.on("connection", (socket) => {
       console.log("-----Chat History----", messages);
     });
 
-  
   socket.on("send-message", async (data) => {
-    const newMessage = new Message(data);
-    await newMessage.save();
-    io.emit("receive-message", data);
-    console.log("---data message---", data);
+    try {
+      if (!data.username || !data.message) {
+        console.error("Mensaje inválido, faltan datos:", data);
+        return;
+      }
+
+      const newMessage = new Message({
+        username: data.username,
+        message: data.message,
+        timestamp: new Date(),
+      });
+
+      await newMessage.save();
+      console.log("Mensaje guardado en la base de datos:", newMessage);
+
+      io.emit("receive-message", newMessage);
+    } catch (error) {
+      console.error("Error al guardar el mensaje:", error);
+    }
   });
 
- 
   socket.on("disconnect", () => {
     console.log("Usuario desconectado:", socket.id);
   });
@@ -45,6 +56,7 @@ io.on("connection", (socket) => {
 db.connect()
   .then(() => {
     console.log("✅ DB connect");
+    app.use(express.static(__dirname + "/public"));
     server.listen(port, () => {
       console.log(`🚀 Servidor corriendo en http://localhost:${port}`);
     });

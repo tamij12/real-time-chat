@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>real-time-chat</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Arial", sans-serif;
+      }
+      body {
+        background: #121212;
+        color: #fff;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+      }
+      h2 {
+        font-size: 24px;
+        margin-bottom: 10px;
+      }
+
+      #chat-box {
+        width: 60%;
+        height: 350px;
+        overflow-y: auto;
+        border: 1px solid #333;
+        border-radius: 10px;
+        padding: 15px;
+        background: #1e1e1e;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+      .message {
+        padding: 10px;
+        border-radius: 8px;
+        max-width: 80%;
+        word-wrap: break-word;
+        font-size: 14px;
+      }
+      .user-message {
+        align-self: flex-end;
+        background: #007bff;
+        color: white;
+      }
+      .other-message {
+        align-self: flex-start;
+        background: #292929;
+      }
+      .username {
+        font-weight: bold;
+      }
+      .timestamp {
+        font-size: 10px;
+        color: gray;
+        margin-left: 5px;
+      }
+
+      .input-group {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+      }
+      input {
+        padding: 10px;
+        border: none;
+        border-radius: 5px;
+        background: #333;
+        color: white;
+      }
+      button {
+        background: #007bff;
+        color: white;
+        padding: 10px 15px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: 0.3s;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+      #disconnectBtn {
+        background: red;
+      }
+      #disconnectBtn:hover {
+        background: darkred;
+      }
+
+      #connect-section {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>💬 ChatMe, Welcome!</h2>
+
+    <div id="chat-section">
+      <div id="chat-box"></div>
+
+      <div class="input-group">
+        <input type="text" id="username" placeholder="Tu nombre" />
+        <input type="text" id="message" placeholder="Escribe un mensaje" />
+        <button onclick="sendMessage()">Enviar</button>
+        <button id="disconnectBtn">Desconectar</button>
+      </div>
+    </div>
+
+    <div id="connect-section">
+      <button id="connectBtn">Conectarse</button>
+    </div>
+
+    <script>
+      let socket;
+      let userColors = {};
+
+      function connectToServer() {
+        socket = io("http://localhost:5000");
+
+        socket.on("chat-history", (messages) => {
+          const chatBox = document.getElementById("chat-box");
+          chatBox.innerHTML = "";
+          messages.forEach((msg) => {
+            renderMessage(msg.username, msg.message, msg.timestamp);
+          });
+        });
+
+        socket.on("receive-message", (data) => {
+          renderMessage(data.username, data.message, data.timestamp);
+        });
+
+        document.getElementById("chat-section").style.display = "block";
+        document.getElementById("connect-section").style.display = "none";
+      }
+
+      function sendMessage() {
+        const username = document.getElementById("username").value.trim();
+        const message = document.getElementById("message").value.trim();
+
+        if (!username || !message) {
+          alert("Por favor, ingresa tu nombre y un mensaje.");
+          return;
+        }
+
+        const timestamp = new Date();
+        socket.emit("send-message", { username, message, timestamp });
+
+        document.getElementById("message").value = "";
+      }
+
+      function disconnectUser() {
+        if (socket) {
+          socket.disconnect();
+        }
+        document.getElementById("chat-section").style.display = "none";
+        document.getElementById("connect-section").style.display = "block";
+        alert("Gracias por conectarte. Hasta la próxima!");
+      }
+
+      function renderMessage(username, message, timestamp) {
+        const chatBox = document.getElementById("chat-box");
+        const color = getUserColor(username);
+
+        const messageDiv = document.createElement("div");
+        messageDiv.classList.add("message");
+        messageDiv.classList.add(
+          username === document.getElementById("username").value.trim()
+            ? "user-message"
+            : "other-message"
+        );
+
+        messageDiv.innerHTML = `<span class="username" style="color:${color}">${username}:</span> ${message}
+        <span class="timestamp">${new Date(timestamp).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        })}</span>`;
+
+        chatBox.appendChild(messageDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }
+
+      function getUserColor(username) {
+        if (!userColors[username]) {
+          userColors[username] = getRandomColor();
+        }
+        return userColors[username];
+      }
+
+      function getRandomColor() {
+        return `hsl(${Math.random() * 360}, 100%, 70%)`;
+      }
+
+      document
+        .getElementById("disconnectBtn")
+        .addEventListener("click", disconnectUser);
+      document
+        .getElementById("connectBtn")
+        .addEventListener("click", connectToServer);
+
+      connectToServer();
+    </script>
+  </body>
+</html>
