@@ -36,4 +36,4 @@ npm start
 ---
 
 🔹 ** Practica con WebSockets y desarrollo en tiempo real.**  
-💡 ¡Cualquier contribución o sugerencia es bienvenida! 😊
+💡 ¡Cualquier  sugerencia es bienvenida! 😊
